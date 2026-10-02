@@ -19,5 +19,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["frequenciaescolar53/vite.config.ts"]
+  "include": ["vite.config.ts"]
 }
