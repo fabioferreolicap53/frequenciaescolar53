@@ -1,0 +1,107 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  --background: oklch(0.98 0.002 247.839);
+  --foreground: oklch(0.21 0.04 265.755);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.04 265.755);
+  --primary: oklch(0.27 0.085 262);
+  --primary-foreground: oklch(0.985 0.002 247.839);
+  --secondary: oklch(0.965 0.007 247.896);
+  --secondary-foreground: oklch(0.21 0.04 265.755);
+  --muted: oklch(0.965 0.007 247.896);
+  --muted-foreground: oklch(0.52 0.04 257.417);
+  --accent: oklch(0.965 0.007 247.896);
+  --accent-foreground: oklch(0.21 0.04 265.755);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0.002 247.839);
+  --border: oklch(0.92 0.006 264.531);
+  --input: oklch(0.9 0.006 264.531);
+  --ring: oklch(0.27 0.085 262);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Animações das telas de autenticação (sem dependências externas). */
+@keyframes auth-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-18px) scale(1.05);
+  }
+}
+
+@keyframes auth-float-slow {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(16px) translateX(-12px);
+  }
+}
+
+@layer utilities {
+  .animate-auth-float {
+    animation: auth-float 8s ease-in-out infinite;
+  }
+
+  .animate-auth-float-slow {
+    animation: auth-float-slow 12s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-auth-float,
+  .animate-auth-float-slow {
+    animation: none;
+  }
+}
