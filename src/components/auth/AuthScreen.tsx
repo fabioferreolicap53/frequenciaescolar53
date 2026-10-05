@@ -6,9 +6,9 @@ interface AuthScreenProps {
 }
 
 const HIGHLIGHTS = [
-  { icon: Users, title: 'Base unificada', text: 'Todos os pacientes da AP 53 em um só lugar.' },
-  { icon: ShieldCheck, title: 'Acesso por unidade', text: 'Cada equipe enxerga o que lhe compete.' },
-  { icon: BookOpenCheck, title: 'Frequência em foco', text: 'Registre SIM ou NÃO com um clique.' },
+  { icon: Users, title: 'Prontuário em foco', text: 'Registre se o paciente em idade escolar frequenta a escola ou não.' },
+  { icon: ShieldCheck, title: 'Acesso por unidade', text: 'Cada equipe enxerga e atualiza o que lhe compete.' },
+  { icon: BookOpenCheck, title: 'Informação sempre atual', text: 'Marque SIM ou NÃO e mantenha o dado do prontuário em dia.' },
 ] as const;
 
 /**
@@ -54,8 +54,9 @@ export function AuthScreen({ subtitle, children }: AuthScreenProps): React.JSX.E
             Quem está na escola, a gente acompanha.
           </h1>
           <p className="mt-3 text-sm text-primary-foreground/75">
-            Registre a frequência escolar dos pacientes da sua unidade e mantenha os indicadores da
-            área sempre em dia.
+            Sistema para ajudar no registro, no prontuário, dos pacientes em idade escolar:
+            registre se frequenta a escola ou não e mantenha essa informação sempre atualizada
+            para a sua equipe.
           </p>
 
           <ul className="mt-9 flex flex-col gap-5">

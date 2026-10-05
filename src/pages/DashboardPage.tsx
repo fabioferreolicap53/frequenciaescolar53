@@ -126,8 +126,10 @@ export function DashboardPage(): React.JSX.Element {
                 Painel de Frequência Escolar
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Acompanhe quais pacientes frequentam a escola e identifique casos que necessitam
-                de intervenção da equipe de saúde. Marque <strong className="font-semibold text-foreground">SIM</strong> ou{' '}
+                Sistema para ajudar no registro, no prontuário, dos pacientes em idade escolar da
+                sua unidade: acompanhe quem frequenta a escola, identifique casos que precisam de
+                atenção da equipe de saúde e mantenha a informação atualizada. Marque{' '}
+                <strong className="font-semibold text-foreground">SIM</strong> ou{' '}
                 <strong className="font-semibold text-foreground">NÃO</strong> para cada paciente.
               </p>
             </div>

@@ -70,7 +70,39 @@ function unitTakenError(cause: unknown): Error {
     );
   }
 
-  return cause instanceof Error ? cause : new Error('Não foi possível concluir o cadastro.');
+  if (data?.['email']?.code === 'email_already_used') {
+    return new Error(
+      'Este e-mail já está cadastrado no sistema. Use outro e-mail ou faça login com a senha existente.',
+    );
+  }
+
+  if (data !== undefined && Object.keys(data).length > 0) {
+    // Erro de validação de campo — mostra o campo e a mensagem traduzida.
+    const firstField = Object.keys(data)[0] ?? '';
+    const code = data[firstField]?.code ?? '';
+
+    const messages: Readonly<Record<string, string>> = {
+      validation_failed: 'Verifique os dados informados.',
+      validation_is_required: 'Preencha todos os campos obrigatórios.',
+      validation_invalid_email: 'O e-mail informado não é válido.',
+      validation_min_length: 'A senha deve ter no mínimo 8 caracteres.',
+      validation_invalid_password: 'A senha não atende aos requisitos mínimos.',
+      validation_mismatch: 'As senhas não coincidem.',
+    };
+
+    const message = messages[code];
+
+    if (message !== undefined) {
+      return new Error(message);
+    }
+
+    // Mensagem genérica do servidor quando não há tradução específica.
+    return new Error(
+      'Não foi possível concluir o cadastro. Verifique os dados informados e tente novamente.',
+    );
+  }
+
+  return new Error('Não foi possível concluir o cadastro. Tente novamente em instantes.');
 }
 
 export async function registerWithPassword(

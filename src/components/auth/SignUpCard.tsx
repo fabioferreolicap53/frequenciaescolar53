@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { UnitPicker } from '@/components/units/UnitPicker';
 import { useAuth } from '@/hooks/useAuth';
+import { markUnitOccupied } from '@/services/units.service';
 import type { UnitName } from '@/lib/units';
 
 /**
@@ -58,6 +59,8 @@ export function SignUpCard(): React.JSX.Element {
 
     try {
       await register({ email: email.trim(), password, passwordConfirm, unit });
+      // Atualiza o mapa de ocupação (fire-and-forget: não bloqueia o fluxo).
+      void markUnitOccupied(unit);
       // Não loga: o acesso só é liberado após clicar no link do e-mail.
       setRegisteredEmail(email.trim());
     } catch (cause) {
@@ -132,7 +135,8 @@ export function SignUpCard(): React.JSX.Element {
           </span>
           <CardTitle className="text-2xl text-primary">Criar acesso</CardTitle>
           <CardDescription>
-            Defina suas credenciais e a unidade que você irá acompanhar.
+            Defina suas credenciais e a unidade que você irá acompanhar. Este sistema ajuda no
+            registro, no prontuário, da frequência escolar dos pacientes em idade escolar.
           </CardDescription>
         </CardHeader>
         <CardContent>

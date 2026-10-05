@@ -71,7 +71,10 @@ export function LoginCard(): React.JSX.Element {
             <ShieldCheck className="h-7 w-7" aria-hidden="true" />
           </span>
           <CardTitle className="text-2xl text-primary">Acesso ao sistema</CardTitle>
-          <CardDescription>Informe seu e-mail e senha para entrar.</CardDescription>
+          <CardDescription>
+            Informe seu e-mail e senha para entrar. Sistema para ajudar no registro, no prontuário,
+            da frequência escolar de pacientes em idade escolar.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">

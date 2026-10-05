@@ -8,6 +8,8 @@ pb.autoCancellation(false);
 export const COLLECTIONS = {
   pacientes: 'frequenciaescolar_pacientes',
   users: 'frequenciaescolar_users',
+  /** Mapa público de ocupação das unidades (1 cadastro por unidade). */
+  unidadesStatus: 'frequenciaescolar_unidades_status',
 } as const;
 
 export function isConfigured(): boolean {
