@@ -5,11 +5,13 @@ import {
   CircleAlert,
   CircleCheck,
   CircleX,
+  Download,
   Eraser,
   ListFilter,
   Loader2,
   Minus,
   Plus,
+  Printer,
   X,
 } from 'lucide-react';
 
@@ -26,11 +28,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { readLocalOverrides, writeLocalOverrides } from '@/lib/attendance-overrides';
 import { isConfigured } from '@/lib/pocketbase';
 import { queryClient, queryKeys } from '@/lib/query-client';
+import {
+  buildCsvContent,
+  buildPrintDocument,
+  buildTableFileName,
+  buildTableRows,
+  downloadTextFile,
+  printDocument,
+} from '@/lib/table-export';
 import { updatePatientAttendance } from '@/services/patients.service';
+import type { UnitName } from '@/lib/units';
 import type {
   AttendanceStatus,
+  PagedResult,
   Patient,
   PatientColumnFilter,
   PatientColumnFilters,
@@ -66,6 +79,10 @@ interface PatientTableProps {
   readonly columnFilters: PatientColumnFilters;
   readonly onColumnFilterChange: (field: PatientSortField, value: PatientColumnFilter) => void;
   readonly onClearColumnFilters: () => void;
+  /** Busca TODOS os pacientes com os filtros atuais (impressão e CSV). */
+  readonly fetchExportPatients: () => Promise<PagedResult<Patient>>;
+  /** Unidade do usuário — impressão do relatório. */
+  readonly unit: UnitName | null;
 }
 
 const TERM_INPUT_STYLES = {
@@ -275,23 +292,6 @@ const STATUS_CONFIG: Readonly<
   pendente: { label: 'Pendente', variant: 'warning', icon: CircleAlert },
 };
 
-const LOCAL_OVERRIDES_KEY = 'frequenciaescolar.localOverrides';
-
-function readLocalOverrides(): Record<string, AttendanceStatus> {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(LOCAL_OVERRIDES_KEY);
-    return raw === null ? {} : (JSON.parse(raw) as Record<string, AttendanceStatus>);
-  } catch {
-    return {};
-  }
-}
-
-function writeLocalOverrides(overrides: Record<string, AttendanceStatus>): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(LOCAL_OVERRIDES_KEY, JSON.stringify(overrides));
-}
-
 export function PatientTable({
   patients,
   isLoading,
@@ -306,15 +306,48 @@ export function PatientTable({
   columnFilters,
   onColumnFilterChange,
   onClearColumnFilters,
+  fetchExportPatients,
+  unit,
 }: PatientTableProps): React.JSX.Element {
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
   const [overrides, setOverrides] = useState<Record<string, AttendanceStatus>>(readLocalOverrides);
   const [showColumnFilters, setShowColumnFilters] = useState(false);
 
+  // Exportação: mesma consulta dos filtros atuais, página completa (lotes de 200).
+  const exportMutation = useMutation({ mutationFn: fetchExportPatients });
+
   const activeColumnFilters = PATIENT_COLUMNS.reduce(
     (total, field) => total + countColumnFilter(columnFilters[field]),
     0,
   );
+
+  const exportDisabled = exportMutation.isPending || isLoading;
+
+  /** Carrega a base completa com os filtros atuais e devolve as linhas. */
+  const loadExportRows = async () => {
+    const result = await exportMutation.mutateAsync();
+    return { rows: buildTableRows(result.items), totalItems: result.totalItems };
+  };
+
+  const handlePrint = async (): Promise<void> => {
+    if (exportDisabled) return;
+    try {
+      const { rows } = await loadExportRows();
+      printDocument(buildPrintDocument(rows, unit));
+    } catch (error) {
+      console.error('[PatientTable] Falha ao montar a impressão.', error);
+    }
+  };
+
+  const handleDownloadCsv = async (): Promise<void> => {
+    if (exportDisabled) return;
+    try {
+      const { rows } = await loadExportRows();
+      downloadTextFile(buildTableFileName(), buildCsvContent(rows), 'text/csv;charset=utf-8;');
+    } catch (error) {
+      console.error('[PatientTable] Falha ao gerar o CSV.', error);
+    }
+  };
 
   const updateMutation = useMutation({
     mutationFn: async ({ patientId, status }: { patientId: string; status: AttendanceStatus }) => {
@@ -359,6 +392,22 @@ export function PatientTable({
           </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" size="sm" disabled={exportDisabled} onClick={handlePrint}>
+            {exportMutation.isPending ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Printer className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Imprimir
+          </Button>
+          <Button variant="outline" size="sm" disabled={exportDisabled} onClick={handleDownloadCsv}>
+            {exportMutation.isPending ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            Baixar CSV
+          </Button>
           <Button
             variant={showColumnFilters ? 'default' : 'outline'}
             size="sm"

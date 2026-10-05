@@ -100,26 +100,11 @@ function buildColumnFilterParts(filters: PatientColumnFilters): string[] {
   return parts;
 }
 
-/**
- * Lista paginada de pacientes.
- * Estratégia de performance para VM com 1GB de RAM:
- * paginação sempre ativa, fields mínimo, requestKey explícito.
- */
-export async function fetchPatients(filters: PatientFilters): Promise<PagedResult<Patient>> {
-  const unit = filters.unit;
+/** Monta a string de filtro combinando unidade, busca, status e colunas. */
+function buildFilterString(filters: PatientFilters): string | null {
   const search = clampSearchTerm(filters.search);
-  const scope = unitFilter(unit);
-
-  const sort = buildSort(filters.sortField, filters.sortDir);
+  const scope = unitFilter(filters.unit);
   const columnFilterParts = buildColumnFilterParts(filters.columnFilters);
-
-  const options: ListOptions = {
-    page: filters.page,
-    perPage: filters.perPage,
-    sort,
-    fields: PATIENT_FIELDS,
-    requestKey: `pacientes-${unit ?? 'todas'}-${filters.page}-${filters.perPage}-${search}-${filters.status}-${filters.sortField}-${filters.sortDir}-${columnFilterParts.join('|')}`,
-  };
 
   const filterParts: string[] = [];
 
@@ -141,8 +126,29 @@ export async function fetchPatients(filters: PatientFilters): Promise<PagedResul
 
   filterParts.push(...columnFilterParts);
 
-  if (filterParts.length > 0) {
-    options.filter = filterParts.join(' && ');
+  return filterParts.length > 0 ? filterParts.join(' && ') : null;
+}
+
+/**
+ * Lista paginada de pacientes.
+ * Estratégia de performance para VM com 1GB de RAM:
+ * paginação sempre ativa, fields mínimo, requestKey explícito.
+ */
+export async function fetchPatients(filters: PatientFilters): Promise<PagedResult<Patient>> {
+  const unit = filters.unit;
+  const search = clampSearchTerm(filters.search);
+
+  const options: ListOptions = {
+    page: filters.page,
+    perPage: filters.perPage,
+    sort: buildSort(filters.sortField, filters.sortDir),
+    fields: PATIENT_FIELDS,
+    requestKey: `pacientes-${unit ?? 'todas'}-${filters.page}-${filters.perPage}-${search}-${filters.status}-${filters.sortField}-${filters.sortDir}`,
+  };
+
+  const filter = buildFilterString(filters);
+  if (filter !== null) {
+    options.filter = filter;
   }
 
   const result = await pb.collection(COLLECTIONS.pacientes).getList(filters.page, filters.perPage, options);
@@ -152,6 +158,45 @@ export async function fetchPatients(filters: PatientFilters): Promise<PagedResul
     perPage: result.perPage,
     totalItems: result.totalItems,
     totalPages: result.totalPages,
+  };
+}
+
+const EXPORT_PER_PAGE = 200;
+
+/**
+ * Busca TODOS os pacientes com os filtros atuais (exportação/impressão).
+ * Pagina em lotes até completar, sem carregar a coleção inteira de uma vez.
+ */
+export async function fetchAllPatients(filters: PatientFilters): Promise<PagedResult<Patient>> {
+  const sort = buildSort(filters.sortField, filters.sortDir);
+  const filter = buildFilterString(filters);
+  const unitKey = filters.unit ?? 'todas';
+
+  const baseOptions = {
+    sort,
+    fields: PATIENT_FIELDS,
+    ...(filter !== null ? { filter } : {}),
+  };
+
+  const first = await pb
+    .collection(COLLECTIONS.pacientes)
+    .getList(1, EXPORT_PER_PAGE, { ...baseOptions, requestKey: `pacientes-export-${unitKey}-1` });
+
+  const items = [...first.items.map(mapPatientRecord)];
+
+  for (let page = 2; page <= first.totalPages; page += 1) {
+    const result = await pb
+      .collection(COLLECTIONS.pacientes)
+      .getList(page, EXPORT_PER_PAGE, { ...baseOptions, requestKey: `pacientes-export-${unitKey}-${page}` });
+    items.push(...result.items.map(mapPatientRecord));
+  }
+
+  return {
+    items,
+    page: 1,
+    perPage: EXPORT_PER_PAGE,
+    totalItems: first.totalItems,
+    totalPages: first.totalPages,
   };
 }
 

@@ -10,6 +10,9 @@ import { useAttendanceSummary } from '@/hooks/useAttendanceSummary';
 import { useAuth } from '@/hooks/useAuth';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { usePatients } from '@/hooks/usePatients';
+import { buildMockPatients } from '@/services/mock-data';
+import { fetchAllPatients } from '@/services/patients.service';
+import type { PagedResult, Patient } from '@/types/patient';
 import type { AttendanceStatus } from '@/types/attendance';
 import type { PatientColumnFilter, PatientColumnFilters, PatientSortField, SortDir } from '@/types/patient';
 import { createEmptyColumnFilters } from '@/types/patient';
@@ -76,6 +79,31 @@ export function DashboardPage(): React.JSX.Element {
 
   const summary = summaryQuery.data;
   const pageData = patientsQuery.data;
+
+  // Exportação (impressão/CSV): TODOS os registros com os filtros atuais.
+  const fetchExportPatients = async (): Promise<PagedResult<Patient>> => {
+    const filters = {
+      page: 1,
+      perPage: 200,
+      search: debouncedSearch,
+      status,
+      unit,
+      sortField,
+      sortDir,
+      columnFilters: debouncedColumnFilters,
+    };
+
+    if (!import.meta.env.DEV) {
+      return fetchAllPatients(filters);
+    }
+
+    try {
+      return await fetchAllPatients(filters);
+    } catch (error) {
+      console.warn('[DashboardPage] PocketBase indisponível — exportação com dados de demonstração.', error);
+      return buildMockPatients(filters);
+    }
+  };
 
   if (!canQuery) {
     return <Navigate to="/login" replace />;
@@ -154,6 +182,8 @@ export function DashboardPage(): React.JSX.Element {
             columnFilters={columnFilters}
             onColumnFilterChange={handleColumnFilterChange}
             onClearColumnFilters={handleClearColumnFilters}
+            fetchExportPatients={fetchExportPatients}
+            unit={unit}
           />
         </div>
       </div>

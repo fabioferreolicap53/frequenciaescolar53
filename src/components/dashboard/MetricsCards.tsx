@@ -38,7 +38,7 @@ export function MetricsCards({
       status: 'todos',
       label: 'Total de pacientes',
       value: summary ? summary.totalPatients.toLocaleString('pt-BR') : '—',
-      hint: 'Importados via CSV',
+      hint: 'Acompanhados pela equipe de saúde',
       icon: Users,
       iconClassName: 'bg-primary/10 text-primary ring-primary/20',
       valueClassName: 'text-primary',
@@ -49,7 +49,7 @@ export function MetricsCards({
       status: 'frequenta',
       label: 'Frequentam a escola',
       value: summary ? summary.attendingStudents.toLocaleString('pt-BR') : '—',
-      hint: 'FREQUENTA_ESCOLA = SIM',
+      hint: 'Frequência escolar confirmada',
       icon: School,
       iconClassName: 'bg-emerald-600/10 text-emerald-700 ring-emerald-600/20',
       valueClassName: 'text-emerald-700',
@@ -60,7 +60,7 @@ export function MetricsCards({
       status: 'nao_frequenta',
       label: 'Não frequentam',
       value: summary ? summary.notAttendingStudents.toLocaleString('pt-BR') : '—',
-      hint: 'FREQUENTA_ESCOLA = NÃO',
+      hint: 'Frequência não confirmada',
       icon: AlertTriangle,
       iconClassName: 'bg-destructive/10 text-destructive ring-destructive/20',
       valueClassName: 'text-destructive',
@@ -71,7 +71,7 @@ export function MetricsCards({
       status: 'pendente',
       label: 'Pendentes de análise',
       value: summary ? summary.pendingStudents.toLocaleString('pt-BR') : '—',
-      hint: 'FREQUENTA_ESCOLA em branco',
+      hint: 'Aguardando registro da equipe',
       icon: Hourglass,
       iconClassName: 'bg-amber-500/10 text-amber-700 ring-amber-500/20',
       valueClassName: 'text-amber-700',
@@ -143,7 +143,7 @@ export function MetricsCards({
               <p className="text-xs text-muted-foreground">
                 {summary === undefined
                   ? 'Calculando...'
-                  : 'Sobre o total de pacientes importados.'}
+                  : 'Em relação ao total de pacientes acompanhados.'}
               </p>
             </div>
           </div>
