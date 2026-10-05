@@ -1,10 +1,22 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { CircleAlert, CircleCheck, CircleX, Loader2 } from 'lucide-react';
+import {
+  ChevronUp,
+  CircleAlert,
+  CircleCheck,
+  CircleX,
+  Eraser,
+  ListFilter,
+  Loader2,
+  Minus,
+  Plus,
+  X,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -17,7 +29,28 @@ import {
 import { isConfigured } from '@/lib/pocketbase';
 import { queryClient, queryKeys } from '@/lib/query-client';
 import { updatePatientAttendance } from '@/services/patients.service';
-import type { AttendanceStatus, Patient } from '@/types/patient';
+import type {
+  AttendanceStatus,
+  Patient,
+  PatientColumnFilter,
+  PatientColumnFilters,
+  PatientSortField,
+  SortDir,
+} from '@/types/patient';
+import { countColumnFilter, PATIENT_COLUMNS } from '@/types/patient';
+
+/** Colunas na ordem exata da tabela — usadas nos cabeçalhos e na linha de filtros. */
+const COLUMNS: readonly {
+  readonly field: PatientSortField;
+  readonly label: string;
+  readonly centered?: boolean;
+}[] = [
+  { field: 'paciente', label: 'Paciente' },
+  { field: 'unidade', label: 'Unidade' },
+  { field: 'equipe', label: 'Equipe' },
+  { field: 'microarea', label: 'Microárea' },
+  { field: 'frequenta', label: 'Frequenta escola', centered: true },
+];
 
 interface PatientTableProps {
   readonly patients: readonly Patient[];
@@ -27,6 +60,204 @@ interface PatientTableProps {
   readonly totalItems: number;
   readonly onPageChange: (page: number) => void;
   readonly canEdit: boolean;
+  readonly sortField: PatientSortField;
+  readonly sortDir: SortDir;
+  readonly onSortChange: (field: PatientSortField) => void;
+  readonly columnFilters: PatientColumnFilters;
+  readonly onColumnFilterChange: (field: PatientSortField, value: PatientColumnFilter) => void;
+  readonly onClearColumnFilters: () => void;
+}
+
+const TERM_INPUT_STYLES = {
+  include: {
+    icon: Plus,
+    iconClass: 'text-emerald-600',
+    chipClass: 'border-emerald-600/40 bg-emerald-600/10 text-emerald-700',
+    borderClass: 'border-emerald-600/60',
+    placeholder: 'contém…',
+  },
+  exclude: {
+    icon: Minus,
+    iconClass: 'text-destructive',
+    chipClass: 'border-destructive/40 bg-destructive/10 text-destructive',
+    borderClass: 'border-destructive/60',
+    placeholder: 'não contém…',
+  },
+} as const;
+
+/**
+ * Campo de filtro multi-termo: digite e pressione Enter (ou vírgula) para empilhar termos.
+ * Backspace com o campo vazio remove o último termo; cada chip tem um "x" para remover.
+ */
+function TermInput({
+  label,
+  mode,
+  terms,
+  onChange,
+}: {
+  readonly label: string;
+  readonly mode: 'include' | 'exclude';
+  readonly terms: readonly string[];
+  readonly onChange: (terms: readonly string[]) => void;
+}): React.JSX.Element {
+  const [draft, setDraft] = useState('');
+  const styles = TERM_INPUT_STYLES[mode];
+  const Icon = styles.icon;
+  const isInclude = mode === 'include';
+
+  const commitDraft = (): void => {
+    const value = draft.trim();
+    setDraft('');
+    if (value === '' || terms.includes(value)) return;
+    onChange([...terms, value]);
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      {terms.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {terms.map((term) => (
+            <span
+              key={term}
+              className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${styles.chipClass}`}
+            >
+              {term}
+              <button
+                type="button"
+                aria-label={`Remover termo ${term}`}
+                onClick={() => onChange(terms.filter((item) => item !== term))}
+                className="rounded-sm hover:opacity-70"
+              >
+                <X className="h-2.5 w-2.5" aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <Icon
+          className={`pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 ${styles.iconClass}`}
+          aria-hidden="true"
+        />
+        <Input
+          aria-label={`${label}: ${isInclude ? 'contém' : 'não contém'}`}
+          title="Digite e pressione Enter (ou vírgula) para adicionar mais de um termo"
+          placeholder={styles.placeholder}
+          value={draft}
+          onChange={(event) => {
+            const value = event.target.value;
+
+            // Vírgula separa vários termos colados de uma vez.
+            if (value.includes(',')) {
+              const next = [...terms];
+              value
+                .split(',')
+                .map((piece) => piece.trim())
+                .filter((piece) => piece !== '')
+                .forEach((piece) => {
+                  if (!next.includes(piece)) next.push(piece);
+                });
+              if (next.length !== terms.length) onChange(next);
+              setDraft('');
+              return;
+            }
+
+            setDraft(value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ',') {
+              event.preventDefault();
+              commitDraft();
+            } else if (event.key === 'Backspace' && draft === '' && terms.length > 0) {
+              onChange(terms.slice(0, -1));
+            }
+          }}
+          onBlur={commitDraft}
+          className={`h-7 pl-6 text-xs ${terms.length > 0 ? styles.borderClass : ''}`}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Filtro duplo multi-termo de uma coluna: `+ contém` (OU entre termos) e
+ * `− não contém` (remove quem tiver qualquer um dos termos).
+ */
+function ColumnFilterInputs({
+  label,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly value: PatientColumnFilter;
+  readonly onChange: (value: PatientColumnFilter) => void;
+}): React.JSX.Element {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <TermInput
+        label={label}
+        mode="include"
+        terms={value.include}
+        onChange={(terms) => onChange({ ...value, include: terms })}
+      />
+      <TermInput
+        label={label}
+        mode="exclude"
+        terms={value.exclude}
+        onChange={(terms) => onChange({ ...value, exclude: terms })}
+      />
+    </div>
+  );
+}
+
+/** Cabeçalho ordenável — doc_ordenacao_tabelas.md §5 (seta só na coluna ativa). */
+function SortableHead({
+  field,
+  label,
+  sortField,
+  sortDir,
+  onSortChange,
+  centered = false,
+  activeFilterCount = 0,
+}: {
+  readonly field: PatientSortField;
+  readonly label: string;
+  readonly sortField: PatientSortField;
+  readonly sortDir: SortDir;
+  readonly onSortChange: (field: PatientSortField) => void;
+  readonly centered?: boolean;
+  readonly activeFilterCount?: number;
+}): React.JSX.Element {
+  const isActive = sortField === field;
+
+  return (
+    <TableHead className={centered ? 'text-center' : undefined}>
+      <button
+        type="button"
+        onClick={() => onSortChange(field)}
+        aria-label={`Ordenar por ${label}`}
+        aria-sort={isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+        className={`flex select-none items-center gap-1 transition-colors ${
+          centered ? 'w-full justify-center' : ''
+        } ${isActive ? 'text-foreground' : 'cursor-pointer hover:text-foreground'}`}
+      >
+        {label}
+        {isActive && (
+          <ChevronUp
+            className={`h-3 w-3 transition-all duration-300 ${sortDir === 'desc' ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+        )}
+        {activeFilterCount > 0 && (
+          <span
+            className="ml-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"
+            aria-label={`${String(activeFilterCount)} filtro(s) ativo(s)`}
+          />
+        )}
+      </button>
+    </TableHead>
+  );
 }
 
 const STATUS_CONFIG: Readonly<
@@ -69,9 +300,21 @@ export function PatientTable({
   totalItems,
   onPageChange,
   canEdit,
+  sortField,
+  sortDir,
+  onSortChange,
+  columnFilters,
+  onColumnFilterChange,
+  onClearColumnFilters,
 }: PatientTableProps): React.JSX.Element {
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
   const [overrides, setOverrides] = useState<Record<string, AttendanceStatus>>(readLocalOverrides);
+  const [showColumnFilters, setShowColumnFilters] = useState(false);
+
+  const activeColumnFilters = PATIENT_COLUMNS.reduce(
+    (total, field) => total + countColumnFilter(columnFilters[field]),
+    0,
+  );
 
   const updateMutation = useMutation({
     mutationFn: async ({ patientId, status }: { patientId: string; status: AttendanceStatus }) => {
@@ -115,23 +358,65 @@ export function PatientTable({
               : `${totalItems} registro(s) · página ${page} de ${totalPages}`}
           </CardDescription>
         </div>
-        {canEdit && (
-          <p className="text-xs text-muted-foreground">
-            Marque <span className="font-medium text-foreground">SIM</span> ou{' '}
-            <span className="font-medium text-foreground">NÃO</span> para cada paciente
-          </p>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant={showColumnFilters ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowColumnFilters((value) => !value)}
+            aria-pressed={showColumnFilters}
+          >
+            <ListFilter className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            Filtros por coluna
+            {activeColumnFilters > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {activeColumnFilters}
+              </Badge>
+            )}
+          </Button>
+          {activeColumnFilters > 0 && (
+            <Button variant="ghost" size="sm" onClick={onClearColumnFilters}>
+              <Eraser className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              Limpar filtros
+            </Button>
+          )}
+          {canEdit && (
+            <p className="text-xs text-muted-foreground">
+              Marque <span className="font-medium text-foreground">SIM</span> ou{' '}
+              <span className="font-medium text-foreground">NÃO</span> para cada paciente
+            </p>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Paciente</TableHead>
-              <TableHead>CNS</TableHead>
-              <TableHead>Unidade / Equipe</TableHead>
-              <TableHead>Idade</TableHead>
-              <TableHead>Frequenta escola</TableHead>
+              {COLUMNS.map((column) => (
+                <SortableHead
+                  key={column.field}
+                  field={column.field}
+                  label={column.label}
+                  centered={column.centered}
+                  activeFilterCount={countColumnFilter(columnFilters[column.field])}
+                  sortField={sortField}
+                  sortDir={sortDir}
+                  onSortChange={onSortChange}
+                />
+              ))}
             </TableRow>
+            {showColumnFilters && (
+              <TableRow className="hover:bg-transparent">
+                {COLUMNS.map((column) => (
+                  <TableHead key={column.field} className="align-top">
+                    <ColumnFilterInputs
+                      label={column.label}
+                      value={columnFilters[column.field]}
+                      onChange={(value) => onColumnFilterChange(column.field, value)}
+                    />
+                  </TableHead>
+                ))}
+              </TableRow>
+            )}
           </TableHeader>
           <TableBody>
             {isLoading ? (
@@ -163,29 +448,23 @@ export function PatientTable({
                       <div className="flex flex-col">
                         <span className="font-medium text-foreground">{patient.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {patient.sex} · Nasc.: {patient.birthDate}
+                          {patient.sex} · Nasc.: {patient.birthDate} · Idade: {patient.age || '—'}
                         </span>
+                        <span className="text-xs text-muted-foreground">{patient.cns || '—'}</span>
                       </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {patient.cns || '—'}
                     </TableCell>
                     <TableCell className="max-w-[200px]">
-                      <div className="flex flex-col">
-                        <span className="line-clamp-1 text-muted-foreground">
-                          {patient.healthUnit}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {patient.healthTeam} · Microárea {patient.microarea}
-                        </span>
-                      </div>
+                      <span className="line-clamp-1 text-muted-foreground">{patient.healthUnit}</span>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {patient.age || '—'}
+                      {patient.healthTeam}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {patient.microarea || '—'}
+                    </TableCell>
+                    <TableCell className="text-center">
                       {canEdit ? (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center justify-center gap-1.5">
                           {(['pendente', 'frequenta', 'nao_frequenta'] as const).map((option) => {
                             const optionCfg = STATUS_CONFIG[option];
                             const OptionIcon = optionCfg.icon;

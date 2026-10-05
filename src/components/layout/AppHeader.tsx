@@ -1,9 +1,7 @@
 import {
-  Bell,
   Building2,
   ChevronDown,
   GraduationCap,
-  LayoutDashboard,
   LogOut,
   MapPin,
   Settings,
@@ -13,15 +11,9 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 
-import { Button } from '@/components/ui/button';
 import { UnitPicker } from '@/components/units/UnitPicker';
 import { useAuth } from '@/hooks/useAuth';
 import { unitLabel } from '@/lib/units';
-
-const NAV_ITEMS = [
-  { to: '/', label: 'Painel', icon: LayoutDashboard, end: true, adminOnly: false },
-  { to: '/configuracoes', label: 'Configurações', icon: Settings, end: false, adminOnly: true },
-] as const;
 
 export function AppHeader(): React.JSX.Element {
   const { user, isAuthenticated, isAdmin, logout, unit, setUnit } = useAuth();
@@ -62,45 +54,15 @@ export function AppHeader(): React.JSX.Element {
           </span>
           <span className="flex flex-col leading-tight">
             <span className="text-sm font-semibold tracking-wide">Frequência Escolar</span>
-            <span className="text-xs text-primary-foreground/70">Acompanhamento ESF · e-SUS</span>
+            <span className="text-xs text-primary-foreground/70">Acompanhamento ESF · AP5.3</span>
           </span>
         </NavLink>
 
-        <nav aria-label="Navegação principal" className="hidden items-center gap-1 md:flex">
-          {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-white/15 text-white'
-                    : 'text-primary-foreground/75 hover:bg-white/10 hover:text-white'
-                }`
-              }
-            >
-              <item.icon className="h-4 w-4" aria-hidden="true" />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Notificações"
-            className="relative text-primary-foreground hover:bg-white/10 hover:text-white"
-          >
-            <Bell className="h-4 w-4" aria-hidden="true" />
-            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          </Button>
-
           {isAuthenticated && unit === null && isAdmin && (
             <span
               title="Administrador — todos os registros do sistema"
-              className="flex items-center gap-2 rounded-md border border-emerald-300/40 bg-emerald-400/15 px-2.5 py-1.5 text-xs font-medium text-emerald-200"
+              className="flex h-9 items-center gap-2 rounded-full border border-emerald-300/40 bg-emerald-400/15 px-3.5 text-xs font-medium text-emerald-200"
             >
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Todas as unidades</span>
@@ -110,7 +72,7 @@ export function AppHeader(): React.JSX.Element {
           {isAuthenticated && unit === null && !isAdmin && (
             <NavLink
               to="/login"
-              className="flex items-center gap-2 rounded-md border border-amber-300/40 bg-amber-400/15 px-2.5 py-1.5 text-xs font-medium text-amber-200 transition-colors hover:bg-amber-400/25"
+              className="flex h-9 items-center gap-2 rounded-full border border-amber-300/40 bg-amber-400/15 px-3.5 text-xs font-medium text-amber-200 transition-colors hover:bg-amber-400/25"
             >
               <TriangleAlert className="h-3.5 w-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Selecionar unidade</span>
@@ -125,10 +87,10 @@ export function AppHeader(): React.JSX.Element {
                 aria-haspopup="listbox"
                 aria-expanded={unitMenuOpen}
                 title={unit}
-                className="flex max-w-[240px] items-center gap-2 rounded-md border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs transition-colors hover:bg-white/20"
+                className="flex h-9 items-center gap-2 rounded-full border border-white/25 bg-white/10 pl-3.5 pr-2.5 text-xs transition-colors hover:bg-white/20"
               >
                 <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                <span className="truncate font-medium">{unitLabel(unit)}</span>
+                <span className="whitespace-nowrap font-medium">{unitLabel(unit)}</span>
                 <ChevronDown className="h-3 w-3 shrink-0" aria-hidden="true" />
               </button>
 
@@ -155,6 +117,27 @@ export function AppHeader(): React.JSX.Element {
             </div>
           )}
 
+          {isAuthenticated && (
+            <span aria-hidden="true" className="hidden h-6 w-px bg-white/25 sm:block" />
+          )}
+
+          {isAdmin && (
+            <NavLink
+              to="/configuracoes"
+              aria-label="Configurações"
+              title="Configurações"
+              className={({ isActive }) =>
+                `flex h-9 w-9 items-center justify-center rounded-full border border-white/25 transition-colors ${
+                  isActive
+                    ? 'bg-white/25 text-white'
+                    : 'bg-white/10 text-primary-foreground/85 hover:bg-white/20'
+                }`
+              }
+            >
+              <Settings className="h-4 w-4" aria-hidden="true" />
+            </NavLink>
+          )}
+
           {isAuthenticated && user !== null ? (
             <div className="relative" ref={menuRef}>
               <button
@@ -162,12 +145,12 @@ export function AppHeader(): React.JSX.Element {
                 onClick={() => setMenuOpen((open) => !open)}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
-                className="flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-2 py-1.5 text-xs transition-colors hover:bg-white/20"
+                className="flex h-9 items-center gap-2.5 rounded-full border border-white/25 bg-white/10 pl-1.5 pr-3 text-xs transition-colors hover:bg-white/20"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold uppercase">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/25 text-[10px] font-bold uppercase ring-1 ring-inset ring-white/30">
                   {user.email.slice(0, 2)}
                 </span>
-                <span className="hidden max-w-[140px] truncate lg:inline">{user.email}</span>
+                <span className="hidden max-w-[200px] truncate lg:inline">{user.email}</span>
                 <ChevronDown className="h-3 w-3" aria-hidden="true" />
               </button>
 
@@ -203,7 +186,7 @@ export function AppHeader(): React.JSX.Element {
           ) : (
             <NavLink
               to="/login"
-              className="flex items-center gap-2 rounded-md bg-white/15 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/25"
+              className="flex h-9 items-center gap-2 rounded-full border border-white/25 bg-white/15 px-4 text-xs font-medium text-white transition-colors hover:bg-white/25"
             >
               <ShieldCheck className="h-4 w-4" aria-hidden="true" />
               Entrar

@@ -79,13 +79,9 @@ export function AuthProvider({ children }: { readonly children: React.ReactNode 
   }, []);
 
   const register = useCallback(async (input: RegistrationInput): Promise<void> => {
-    const session = await registerService(
-      input.email,
-      input.password,
-      input.passwordConfirm,
-      input.unit,
-    );
-    setUser(session.record);
+    // Cria a conta e dispara o e-mail de confirmação — sem autenticar.
+    // O login só passa depois que o usuário confirmar o e-mail.
+    await registerService(input.email, input.password, input.passwordConfirm, input.unit);
   }, []);
 
   const logout = useCallback((): void => {

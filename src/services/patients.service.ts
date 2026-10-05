@@ -2,7 +2,15 @@ import { COLLECTIONS, pb } from '@/lib/pocketbase';
 import type { UnitName } from '@/lib/units';
 import { clampSearchTerm, mapPatientRecord } from '@/services/base';
 import type { AttendanceStatus, AttendanceSummary } from '@/types/attendance';
-import type { PagedResult, Patient, PatientFilters } from '@/types/patient';
+import type {
+  PagedResult,
+  Patient,
+  PatientColumnFilters,
+  PatientFilters,
+  PatientSortField,
+  SortDir,
+} from '@/types/patient';
+import { PATIENT_COLUMNS } from '@/types/patient';
 
 interface ListOptions {
   page: number;
@@ -40,6 +48,59 @@ const PATIENT_FIELDS =
   'id,NOME_DA_PESSOA_CADASTRADA,N_CNS_DA_PESSOA_CADASTRADA,NOME_DA_MAE_PESSOA_CADASTRADA,NOME_UNIDADE_DE_SAUDE,NOME_EQUIPE_DE_SAUDE,CODIGO_MICROAREA,SITUACAO_USUARIO,SEXO,RACA_COR,DATA_DE_NASCIMENTO,IDADE,FREQUENTA_ESCOLA,created,updated';
 
 /**
+ * Mapeia coluna → campo da coleção. Serve tanto para ordenação (`sort`)
+ * quanto para os filtros duplos por coluna (`~` / `!~`).
+ */
+const SORT_FIELDS: Readonly<Record<PatientSortField, string>> = {
+  paciente: 'NOME_DA_PESSOA_CADASTRADA',
+  unidade: 'NOME_UNIDADE_DE_SAUDE',
+  equipe: 'NOME_EQUIPE_DE_SAUDE',
+  microarea: 'CODIGO_MICROAREA',
+  frequenta: 'FREQUENTA_ESCOLA',
+};
+
+/** Monta string de sort do PocketBase. */
+function buildSort(field: PatientSortField, dir: SortDir): string {
+  return `${dir === 'asc' ? '' : '-'}${SORT_FIELDS[field]}`;
+}
+
+/** Escapa aspas e barras para injeção segura em filtros do PocketBase. */
+function escapeFilterValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+/**
+ * Constrói os filtros duplos multi-termo por coluna.
+ * `include` → `(campo ~ "a" || campo ~ "b")` (contém qualquer termo).
+ * `exclude` → `campo !~ "a" && campo !~ "b"` (não contém nenhum).
+ */
+function buildColumnFilterParts(filters: PatientColumnFilters): string[] {
+  const parts: string[] = [];
+
+  PATIENT_COLUMNS.forEach((field) => {
+    const column = SORT_FIELDS[field];
+
+    const includes = filters[field].include
+      .map((term) => clampSearchTerm(term))
+      .filter((term) => term !== '');
+
+    if (includes.length > 0) {
+      const orParts = includes.map((term) => `${column} ~ "${escapeFilterValue(term)}"`);
+      parts.push(`(${orParts.join(' || ')})`);
+    }
+
+    filters[field].exclude
+      .map((term) => clampSearchTerm(term))
+      .filter((term) => term !== '')
+      .forEach((term) => {
+        parts.push(`${column} !~ "${escapeFilterValue(term)}"`);
+      });
+  });
+
+  return parts;
+}
+
+/**
  * Lista paginada de pacientes.
  * Estratégia de performance para VM com 1GB de RAM:
  * paginação sempre ativa, fields mínimo, requestKey explícito.
@@ -49,12 +110,15 @@ export async function fetchPatients(filters: PatientFilters): Promise<PagedResul
   const search = clampSearchTerm(filters.search);
   const scope = unitFilter(unit);
 
+  const sort = buildSort(filters.sortField, filters.sortDir);
+  const columnFilterParts = buildColumnFilterParts(filters.columnFilters);
+
   const options: ListOptions = {
     page: filters.page,
     perPage: filters.perPage,
-    sort: '-updated',
+    sort,
     fields: PATIENT_FIELDS,
-    requestKey: `pacientes-${unit ?? 'todas'}-${filters.page}-${filters.perPage}-${search}-${filters.status}`,
+    requestKey: `pacientes-${unit ?? 'todas'}-${filters.page}-${filters.perPage}-${search}-${filters.status}-${filters.sortField}-${filters.sortDir}-${columnFilterParts.join('|')}`,
   };
 
   const filterParts: string[] = [];
@@ -74,6 +138,8 @@ export async function fetchPatients(filters: PatientFilters): Promise<PagedResul
   } else if (filters.status === 'pendente') {
     filterParts.push(PENDING_FILTER);
   }
+
+  filterParts.push(...columnFilterParts);
 
   if (filterParts.length > 0) {
     options.filter = filterParts.join(' && ');

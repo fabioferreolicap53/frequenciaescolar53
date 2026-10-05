@@ -8,6 +8,7 @@ import {
   Loader2,
   Lock,
   Mail,
+  MailCheck,
   ShieldCheck,
   UserPlus,
 } from 'lucide-react';
@@ -35,6 +36,8 @@ export function SignUpCard(): React.JSX.Element {
   const [unit, setUnit] = useState<UnitName | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  /** E-mail confirmado no envio — mostra a tela de "confirme seu e-mail". */
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -54,7 +57,8 @@ export function SignUpCard(): React.JSX.Element {
 
     try {
       await register({ email: email.trim(), password, passwordConfirm, unit });
-      navigate('/');
+      // Não loga: o acesso só é liberado após clicar no link do e-mail.
+      setRegisteredEmail(email.trim());
     } catch (cause) {
       setError(
         cause instanceof Error && cause.message !== ''
@@ -64,6 +68,58 @@ export function SignUpCard(): React.JSX.Element {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  // Cadastro criado — instrução clara de confirmação pelo e-mail.
+  if (registeredEmail !== null) {
+    return (
+      <AuthScreen subtitle="Cadastro de usuário · AP 53">
+        <Card className="relative z-10 w-full max-w-xl overflow-hidden rounded-2xl border-border/70 shadow-xl shadow-primary/5">
+          <CardHeader className="flex flex-col items-center gap-3 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10">
+              <MailCheck className="h-7 w-7" aria-hidden="true" />
+            </span>
+            <CardTitle className="text-2xl text-emerald-700">Confirme seu e-mail</CardTitle>
+            <CardDescription>
+              Cadastro criado com sucesso. Falta só um passo para ativar o acesso.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-5">
+            <div className="rounded-xl border border-emerald-500/25 bg-emerald-50 p-4 text-sm leading-relaxed text-emerald-900">
+              Enviamos um e-mail de confirmação para{' '}
+              <strong className="break-all">{registeredEmail}</strong>.{' '}
+              <strong>
+                Clique no botão contido nesse e-mail para ativar o cadastro
+              </strong>{' '}
+              — só depois disso você poderá entrar no sistema.
+            </div>
+
+            <p className="text-center text-sm text-muted-foreground">
+              Não recebeu? Espere alguns minutos e verifique a caixa de <strong>spam</strong>.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <Button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="h-10 w-full bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
+              >
+                <Mail className="h-4 w-4" aria-hidden="true" />
+                Já confirmei — ir para o login
+              </Button>
+              <Link
+                to="/cadastro"
+                onClick={() => setRegisteredEmail(null)}
+                className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                Fazer outro cadastro
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </AuthScreen>
+    );
   }
 
   return (

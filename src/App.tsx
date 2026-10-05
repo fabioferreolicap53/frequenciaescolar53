@@ -1,6 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
+import { VerifyNotice } from '@/components/VerifyNotice';
 import { AuthProvider } from '@/hooks/useAuth';
 import { queryClient } from '@/lib/query-client';
 import { CadastroPage } from '@/pages/CadastroPage';
@@ -12,6 +13,7 @@ export default function App(): React.JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <VerifyNotice />
         <AuthProvider>
           <Routes>
             <Route path="/" element={<DashboardPage />} />

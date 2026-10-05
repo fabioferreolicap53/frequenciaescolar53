@@ -1,6 +1,8 @@
 import type { UnitName } from '@/lib/units';
+import { stripAccents } from '@/services/base';
 import type { AttendanceSummary } from '@/types/attendance';
-import type { PagedResult, Patient, PatientFilters } from '@/types/patient';
+import type { PatientFilters, PatientSortField, PagedResult, Patient, SortDir } from '@/types/patient';
+import { PATIENT_COLUMNS } from '@/types/patient';
 
 /**
  * Dados de demonstração com o formato real da coleção
@@ -222,6 +224,65 @@ export function buildMockSummary(unit: UnitName | null): AttendanceSummary {
   };
 }
 
+/** Texto comparável: sem acentos e minúsculo (espelha o `~` do PocketBase). */
+function normalizeText(value: string): string {
+  return stripAccents(value).toLowerCase();
+}
+
+/** Valor de cada coluna usado pelos filtros duplos. */
+function columnFilterValue(patient: Patient, field: PatientSortField): string {
+  switch (field) {
+    case 'unidade':
+      return patient.healthUnit;
+    case 'equipe':
+      return patient.healthTeam;
+    case 'microarea':
+      return patient.microarea;
+    case 'frequenta':
+      return patient.schoolAttendanceRaw;
+    default:
+      return patient.name;
+  }
+}
+
+/**
+ * Ordena dados de demonstração conforme doc_ordenacao_tabelas.md (§4/§10):
+ * `localeCompare("pt-BR")` para textos, comparação aritmética para idade.
+ */
+function sortMockPatients(
+  list: readonly Patient[],
+  field: PatientSortField,
+  dir: SortDir,
+): readonly Patient[] {
+  const sorted = [...list].sort((a, b) => {
+    let cmp: number;
+
+    switch (field) {
+      case 'unidade':
+        cmp = a.healthUnit.localeCompare(b.healthUnit, 'pt-BR', { sensitivity: 'base' });
+        break;
+      case 'equipe':
+        cmp = a.healthTeam.localeCompare(b.healthTeam, 'pt-BR', { sensitivity: 'base' });
+        break;
+      case 'microarea':
+        cmp = a.microarea.localeCompare(b.microarea, 'pt-BR', { sensitivity: 'base' });
+        break;
+      case 'frequenta':
+        cmp = a.attendanceStatus.localeCompare(b.attendanceStatus, 'pt-BR', {
+          sensitivity: 'base',
+        });
+        break;
+      default:
+        cmp = a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+        break;
+    }
+
+    return dir === 'asc' ? cmp : -cmp;
+  });
+
+  return sorted;
+}
+
 export function buildMockPatients(filters: PatientFilters): PagedResult<Patient> {
   const search = filters.search.trim().toLowerCase();
 
@@ -240,13 +301,39 @@ export function buildMockPatients(filters: PatientFilters): PagedResult<Patient>
     );
   }
 
-  const totalItems = filtered.length;
+  // Filtros duplos multi-termo: contém (OU entre termos) e não contém (nenhum termo).
+  PATIENT_COLUMNS.forEach((field) => {
+    const includes = filters.columnFilters[field].include
+      .map((term) => normalizeText(term))
+      .filter((term) => term !== '');
+    const excludes = filters.columnFilters[field].exclude
+      .map((term) => normalizeText(term))
+      .filter((term) => term !== '');
+
+    if (includes.length > 0) {
+      filtered = filtered.filter((patient) => {
+        const value = normalizeText(columnFilterValue(patient, field));
+        return includes.some((term) => value.includes(term));
+      });
+    }
+
+    excludes.forEach((term) => {
+      filtered = filtered.filter(
+        (patient) => !normalizeText(columnFilterValue(patient, field)).includes(term),
+      );
+    });
+  });
+
+  // Paginação aplicada depois da ordenação (doc §7).
+  const sorted = sortMockPatients(filtered, filters.sortField, filters.sortDir);
+
+  const totalItems = sorted.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / filters.perPage));
   const page = Math.min(filters.page, totalPages);
   const start = (page - 1) * filters.perPage;
 
   return {
-    items: filtered.slice(start, start + filters.perPage),
+    items: sorted.slice(start, start + filters.perPage),
     page,
     perPage: filters.perPage,
     totalItems,

@@ -4,6 +4,7 @@ import { queryKeys } from '@/lib/query-client';
 import { fetchPatients } from '@/services/patients.service';
 import { buildMockPatients } from '@/services/mock-data';
 import type { PagedResult, Patient, PatientFilters } from '@/types/patient';
+import { serializeColumnFilters } from '@/types/patient';
 
 const PER_PAGE = 10;
 
@@ -23,6 +24,9 @@ export function usePatients(
       search: filters.search,
       status: filters.status,
       unit: filters.unit ?? 'todas',
+      sortField: filters.sortField,
+      sortDir: filters.sortDir,
+      columnFilters: serializeColumnFilters(filters.columnFilters),
     }),
     enabled,
     queryFn: async () => {

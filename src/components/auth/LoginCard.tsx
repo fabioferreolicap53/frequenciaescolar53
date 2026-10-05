@@ -39,11 +39,25 @@ export function LoginCard(): React.JSX.Element {
       await login(email.trim(), password);
       navigate('/');
     } catch (cause) {
-      setError(
-        cause instanceof Error && cause.message !== ''
-          ? cause.message
-          : 'Falha na autenticação. Verifique suas credenciais.',
-      );
+      // authRule "verified = true" violada → PocketBase responde 403.
+      // Credenciais inválidas / e-mail inexistente → 400.
+      const status = typeof cause === 'object' && cause !== null && 'status' in cause
+        ? Number((cause as { status: unknown }).status)
+        : 0;
+
+      if (status === 403) {
+        setError(
+          'Seu e-mail ainda não foi confirmado. Acesse a caixa de entrada (ou spam) do e-mail cadastrado e clique no botão "Confirmar meu e-mail" da mensagem enviada pelo sistema — só depois disso você poderá entrar.',
+        );
+      } else if (status === 400) {
+        setError('E-mail ou senha incorretos. Verifique os dados e tente novamente.');
+      } else {
+        setError(
+          cause instanceof Error && cause.message !== ''
+            ? cause.message
+            : 'Falha na autenticação. Verifique suas credenciais.',
+        );
+      }
     } finally {
       setIsLoading(false);
     }

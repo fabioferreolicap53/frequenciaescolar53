@@ -9,7 +9,7 @@ export function clampSearchTerm(term: string): string {
   return term.trim().slice(0, MAX_QUERY_LENGTH);
 }
 
-function stripAccents(value: string): string {
+export function stripAccents(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 

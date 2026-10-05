@@ -18,6 +18,57 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Confirmação de e-mail (?verify=TOKEN) — executa ANTES do React carregar -->
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var verifyToken = params.get('verify');
+        var pbUrl = 'https://centraldedados.dev.br';
+
+        if (verifyToken) {
+          // Limpa a URL (token fica invisível na barra de endereço)
+          window.history.replaceState(null, '', window.location.pathname);
+
+          fetch(pbUrl + '/api/collections/frequenciaescolar_users/confirm-verification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              Accept: 'application/json',
+            },
+            body: 'token=' + encodeURIComponent(verifyToken),
+          })
+            .then(function (resp) {
+              var ct = resp.headers.get('content-type') || '';
+              if (ct.indexOf('application/json') !== -1) {
+                return resp.json().then(function (data) {
+                  var msg = (data && data.message) || '';
+                  if (resp.ok || msg.indexOf('already') !== -1 || msg.indexOf('verificad') !== -1) {
+                    window.location.replace(window.location.pathname + '?verified=1');
+                  } else {
+                    window.location.replace(
+                      window.location.pathname +
+                        '?verify_error=' +
+                        encodeURIComponent(msg || 'token_invalido'),
+                    );
+                  }
+                });
+              }
+              if (resp.ok) {
+                window.location.replace(window.location.pathname + '?verified=1');
+              } else {
+                window.location.replace(
+                  window.location.pathname + '?verify_error=http_' + resp.status,
+                );
+              }
+            })
+            .catch(function () {
+              window.location.replace(window.location.pathname + '?verify_error=conexao');
+            });
+        }
+      })();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

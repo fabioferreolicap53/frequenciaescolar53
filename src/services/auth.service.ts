@@ -51,7 +51,9 @@ export function logout(): void {
 }
 
 /**
- * Cadastra um novo usuário em `frequenciaescolar_users` e já o autentica.
+ * Cadastra um novo usuário em `frequenciaescolar_users` e envia o e-mail de
+ * confirmação. NÃO autentica: o acesso só é liberado após o usuário clicar
+ * no link de verificação (a collection exige `verified = true` no login).
  * A unidade é gravada uma única vez, no cadastro (validada pela API rule
  * `@request.body.role = "user"`).
  */
@@ -60,7 +62,7 @@ export async function registerWithPassword(
   password: string,
   passwordConfirm: string,
   unit: UnitName,
-): Promise<AuthSession> {
+): Promise<void> {
   await pb.collection(COLLECTIONS.users).create({
     email,
     password,
@@ -69,7 +71,18 @@ export async function registerWithPassword(
     [UNIT_FIELD]: unit,
   });
 
-  return loginWithPassword(email, password);
+  // O PocketBase NÃO envia e-mail de verificação no create.
+  // É preciso disparar manualmente via endpoint `request-verification`
+  // (obrigatoriamente application/x-www-form-urlencoded).
+  try {
+    await fetch(`${pb.baseURL}/api/collections/${COLLECTIONS.users}/request-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ email }),
+    });
+  } catch {
+    // Falha no envio não pode impedir o cadastro — o usuário já está criado.
+  }
 }
 
 /**

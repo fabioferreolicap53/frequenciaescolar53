@@ -15,8 +15,15 @@ export const queryKeys = {
   dashboard: {
     all: ['dashboard'] as const,
     summary: (unit: string) => [...queryKeys.dashboard.all, 'summary', unit] as const,
-    attendance: (params: { page: number; search: string; status: string; unit: string }) =>
-      [...queryKeys.dashboard.all, 'attendance', params] as const,
+    attendance: (params: {
+      page: number;
+      search: string;
+      status: string;
+      unit: string;
+      sortField: string;
+      sortDir: string;
+      columnFilters: string;
+    }) => [...queryKeys.dashboard.all, 'attendance', params] as const,
   },
   import: {
     all: ['import'] as const,
