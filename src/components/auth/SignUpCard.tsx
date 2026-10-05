@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { AuthScreen } from '@/components/auth/AuthScreen';
+import { UnitStatusMap } from '@/components/auth/UnitStatusMap';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -230,15 +231,20 @@ export function SignUpCard(): React.JSX.Element {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 rounded-xl border border-primary/15 bg-primary/5 p-3.5">
-              <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                <Building2 className="h-4 w-4" aria-hidden="true" />
-                Unidade de atuação
-                <span className="ml-auto text-xs font-normal text-muted-foreground">
-                  definida no cadastro
-                </span>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2 rounded-xl border border-primary/15 bg-primary/5 p-3.5">
+                <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                  <Building2 className="h-4 w-4" aria-hidden="true" />
+                  Unidade de atuação
+                  <span className="ml-auto text-xs font-normal text-muted-foreground">
+                    definida no cadastro
+                  </span>
+                </div>
+                <UnitPicker value={unit} onChange={setUnit} />
               </div>
-              <UnitPicker value={unit} onChange={setUnit} />
+
+              {/* Mapa de ocupação: quais unidades já têm cadastro / estão livres */}
+              <UnitStatusMap selectedUnit={unit} onSelect={setUnit} />
             </div>
 
             {error !== null && (
