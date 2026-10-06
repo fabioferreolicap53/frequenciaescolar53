@@ -13,7 +13,6 @@ export function AppShell({ children }: AppShellProps): React.JSX.Element {
       <footer className="border-t border-border bg-card">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <span>Frequência Escolar — registro no prontuário da frequência escolar de pacientes em idade escolar</span>
-          <span className="text-muted-foreground/70">Fonte: e-SUS APS · via PocketBase</span>
         </div>
         {/* Assinatura do desenvolvedor — selo discreto no rodapé */}
         <div className="border-t border-border/60 bg-muted/40">
