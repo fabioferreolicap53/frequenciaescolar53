@@ -1,5 +1,6 @@
 import { readLocalOverrides } from '@/lib/attendance-overrides';
 import type { UnitName } from '@/lib/units';
+import { SYSTEM_CREDIT } from '@/lib/utils';
 import type { AttendanceStatus, Patient } from '@/types/patient';
 
 const CSV_BOM = '\uFEFF';
@@ -141,6 +142,7 @@ export function buildPrintDocument(rows: readonly ExportRow[], unit: UnitName | 
   th, td { border: 1px solid #cbd5e1; padding: 5px 7px; text-align: left; vertical-align: top; }
   th { background: #f1f5f9; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #334155; }
   tbody tr:nth-child(even) { background: #f8fafc; }
+  footer { margin-top: 18px; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 11px; color: #475569; display: flex; justify-content: space-between; }
 </style>
 </head>
 <body>
@@ -152,6 +154,10 @@ export function buildPrintDocument(rows: readonly ExportRow[], unit: UnitName | 
 <thead><tr>${headerCells}</tr></thead>
 <tbody>${bodyRows}</tbody>
 </table>
+<footer>
+  <span>${escapeHtml(SYSTEM_CREDIT)}</span>
+  <span>Atenção Primária · AP 53</span>
+</footer>
 </body>
 </html>`;
 }

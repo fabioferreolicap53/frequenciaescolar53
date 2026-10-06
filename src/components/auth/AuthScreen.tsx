@@ -1,5 +1,7 @@
 import { BookOpenCheck, GraduationCap, ShieldCheck, Users } from 'lucide-react';
 
+import { SYSTEM_CREDIT } from '@/lib/utils';
+
 interface AuthScreenProps {
   readonly subtitle: string;
   readonly children: React.ReactNode;
@@ -77,7 +79,10 @@ export function AuthScreen({ subtitle, children }: AuthScreenProps): React.JSX.E
           </ul>
         </div>
 
-        <p className="relative z-10 text-xs text-primary-foreground/60">{subtitle}</p>
+        <div className="relative z-10 flex flex-col gap-1">
+          <p className="text-xs text-primary-foreground/60">{subtitle}</p>
+          <p className="text-[11px] text-primary-foreground/45">{SYSTEM_CREDIT}</p>
+        </div>
       </aside>
 
       {/* Área do formulário */}
@@ -104,6 +109,14 @@ export function AuthScreen({ subtitle, children }: AuthScreenProps): React.JSX.E
           </div>
 
           {children}
+
+          {/* Assinatura do desenvolvedor — visível em todas as telas de acesso */}
+          <p
+            className="relative z-10 pt-1 text-center text-[11px] text-muted-foreground/70"
+            title={SYSTEM_CREDIT}
+          >
+            {SYSTEM_CREDIT}
+          </p>
         </div>
       </main>
     </div>

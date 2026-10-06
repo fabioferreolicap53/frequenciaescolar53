@@ -9,6 +9,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { DeleteDatabaseCard } from '@/components/settings/DeleteDatabaseCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useImportPacientes } from '@/hooks/useImportPacientes';
+import { SYSTEM_CREDIT } from '@/lib/utils';
 
 export function ConfiguracoesPage(): React.JSX.Element {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -64,6 +65,27 @@ export function ConfiguracoesPage(): React.JSX.Element {
             <DeleteDatabaseCard />
           </div>
         </div>
+
+        {/* Assinatura técnica — crédito do desenvolvedor */}
+        <section
+          aria-label="Sobre o sistema"
+          className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="text-sm font-semibold text-foreground">Sobre o sistema</p>
+            <p className="text-xs text-muted-foreground">
+              Painel de registro, no prontuário, da frequência escolar de pacientes em idade
+              escolar — Atenção Primária da AP 53.
+            </p>
+          </div>
+          <span
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary/85"
+            title={SYSTEM_CREDIT}
+          >
+            <span aria-hidden="true" className="h-1 w-1 rounded-full bg-primary/60" />
+            {SYSTEM_CREDIT}
+          </span>
+        </section>
       </div>
     </AppShell>
   );

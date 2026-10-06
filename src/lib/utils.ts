@@ -9,6 +9,9 @@ export function formatPercent(value: number): string {
   return `${value.toFixed(1).replace('.', ',')}%`;
 }
 
+/** Crédito exibido nos rodapés do sistema, relatório impresso e tela de acesso. */
+export const SYSTEM_CREDIT = 'Desenvolvido por Fabio Ferreira de Oliveira — DAPS/CAP5.3';
+
 /** Converte segundos em "Xm YYs" (ou "Xs" quando < 1 min). */
 export function formatDuration(totalSeconds: number): string {
   if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
