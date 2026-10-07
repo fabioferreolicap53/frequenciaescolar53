@@ -8,8 +8,12 @@ pb.autoCancellation(false);
 export const COLLECTIONS = {
   pacientes: 'frequenciaescolar_pacientes',
   users: 'frequenciaescolar_users',
-  /** Mapa público de ocupação das unidades (1 cadastro por unidade). */
-  unidadesStatus: 'frequenciaescolar_unidades_status',
+  /**
+   * View pública de ocupação das unidades (1 cadastro por unidade).
+   * Projeta apenas `unidade` de `frequenciaescolar_users` — por ser uma
+   * view sobre a coleção de usuários, fica sempre sincronizada.
+   */
+  unidadesOcupadas: 'frequenciaescolar_unidades_ocupadas',
 } as const;
 
 export function isConfigured(): boolean {

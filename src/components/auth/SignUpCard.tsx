@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Building2,
@@ -20,7 +21,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { UnitPicker } from '@/components/units/UnitPicker';
 import { useAuth } from '@/hooks/useAuth';
-import { markUnitOccupied } from '@/services/units.service';
 import type { UnitName } from '@/lib/units';
 
 /**
@@ -30,6 +30,7 @@ import type { UnitName } from '@/lib/units';
 export function SignUpCard(): React.JSX.Element {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -59,8 +60,9 @@ export function SignUpCard(): React.JSX.Element {
 
     try {
       await register({ email: email.trim(), password, passwordConfirm, unit });
-      // Atualiza o mapa de ocupação (fire-and-forget: não bloqueia o fluxo).
-      void markUnitOccupied(unit);
+      // A unidade gravada no cadastro alimenta a view pública de ocupação —
+      // invalida a consulta para o mapa refletir a mudança na próxima leitura.
+      void queryClient.invalidateQueries({ queryKey: ['unidades', 'ocupacao'] });
       // Não loga: o acesso só é liberado após clicar no link do e-mail.
       setRegisteredEmail(email.trim());
     } catch (cause) {
